@@ -17,6 +17,7 @@
 import Foundation
 import ObjectiveC
 
+@available(iOS 8.0, *)
 class XWVBindingObject : XWVScriptObject {
     let key = unsafeAddressOf(XWVScriptObject)
     var object: AnyObject!
@@ -77,7 +78,7 @@ class XWVBindingObject : XWVScriptObject {
             }
             if channel.queue != nil {
                 dispatch_async(channel.queue) {
-                    XWVInvocation(target: object).call(selector, withObjects: args)
+                    XWVInvocation(target: self.object).call(selector, withObjects: args)
                 }
             } else {
                 // FIXME: Add NSThread support back while migrate to Swift 2.0
@@ -90,7 +91,7 @@ class XWVBindingObject : XWVScriptObject {
             let val: AnyObject = wrapScriptObject(value)
             if channel.queue != nil {
                 dispatch_async(channel.queue) {
-                    XWVInvocation(target: object).call(setter, withObjects: [val])
+                    XWVInvocation(target: self.object).call(setter, withObjects: [val])
                 }
             } else {
                 // FIXME: Add NSThread support back while migrate to Swift 2.0
@@ -156,6 +157,7 @@ class XWVBindingObject : XWVScriptObject {
 }
 
 public extension NSObject {
+    @available(iOS 8.0, *)
     var scriptObject: XWVScriptObject? {
         return objc_getAssociatedObject(self, unsafeAddressOf(XWVScriptObject)) as? XWVScriptObject
     }

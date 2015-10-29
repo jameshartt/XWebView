@@ -16,6 +16,7 @@
 
 import Foundation
 
+@available(iOS 8.0, *)
 public class XWVScriptObject : XWVObject {
     // JavaScript object operations
     public func construct(arguments arguments: [AnyObject]?, resultHandler: ((AnyObject!)->Void)?) {
@@ -87,6 +88,7 @@ public class XWVScriptObject : XWVObject {
     }
 }
 
+@available(iOS 8.0, *)
 extension XWVScriptObject {
     // Subscript as property accessor
     public subscript(name: String) -> AnyObject? {
@@ -107,6 +109,7 @@ extension XWVScriptObject {
     }
 }
 
+@available(iOS 8.0, *)
 extension XWVScriptObject {
     // DOM objects
     public var windowObject: XWVScriptObject {

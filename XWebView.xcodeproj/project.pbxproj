@@ -23,8 +23,8 @@
 		EE3379401AE57566009124A4 /* XWVScriptingTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE33793F1AE57566009124A4 /* XWVScriptingTest.swift */; };
 		EE5BA7BD1B67DC940095AAE7 /* XWVInvocationTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE5BA7BC1B67DC940095AAE7 /* XWVInvocationTest.swift */; };
 		EE62692619FA52FC00EFC3F8 /* XWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE62692019FA52FC00EFC3F8 /* XWebView.swift */; };
-		EE8BA6E51BCBFFBC004421CA /* XWVHttpConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8BA6E31BCBFFBC004421CA /* XWVHttpConnection.swift */; settings = {ASSET_TAGS = (); }; };
-		EE8BA6E61BCBFFBC004421CA /* XWVHttpServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8BA6E41BCBFFBC004421CA /* XWVHttpServer.swift */; settings = {ASSET_TAGS = (); }; };
+		EE8BA6E51BCBFFBC004421CA /* XWVHttpConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8BA6E31BCBFFBC004421CA /* XWVHttpConnection.swift */; };
+		EE8BA6E61BCBFFBC004421CA /* XWVHttpServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE8BA6E41BCBFFBC004421CA /* XWVHttpServer.swift */; };
 		EE92C65F1B5ACF81000FE1DA /* XWVMetaObject.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE92C65E1B5ACF81000FE1DA /* XWVMetaObject.swift */; };
 		EE92C6611B5AD7DB000FE1DA /* XWVMetaObjectTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE92C6601B5AD7DB000FE1DA /* XWVMetaObjectTest.swift */; };
 		EEDF30601B6555B900A21659 /* XWVInvocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEDF305F1B6555B900A21659 /* XWVInvocation.swift */; };
@@ -457,6 +457,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = XWebView/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.xwebview.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -473,6 +474,7 @@
 				DYLIB_INSTALL_NAME_BASE = "@rpath";
 				INFOPLIST_FILE = XWebView/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = "org.xwebview.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";

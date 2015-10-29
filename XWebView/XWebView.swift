@@ -18,6 +18,7 @@ import Foundation
 import ObjectiveC
 import WebKit
 
+@available(iOS 8.0, *)
 extension WKWebView {
     public func loadPlugin(object: AnyObject, namespace: String) -> XWVScriptObject? {
         let channel = XWVChannel(name: nil, webView: self)
@@ -40,6 +41,7 @@ extension WKWebView {
     }
 }
 
+@available(iOS 8.0, *)
 extension WKWebView {
     // Synchronized evaluateJavaScript
     public func evaluateJavaScript(script: String, error: NSErrorPointer = nil) -> AnyObject? {
@@ -92,6 +94,7 @@ extension WKWebView {
     }
 }
 
+@available(iOS 8.0, *)
 extension WKWebView {
     // Overlay support for loading file URL
     public func loadFileURL(URL: NSURL, overlayURLs: [NSURL]? = nil) -> WKNavigation? {
@@ -106,6 +109,7 @@ extension WKWebView {
     }
 }
 
+@available(iOS 8.0, *)
 extension WKWebView {
     // WKWebView can't load file URL on iOS 8.x devices.
     // We have to start an embedded http server for proxy.
@@ -115,8 +119,8 @@ extension WKWebView {
     // Swift 2 doesn't support override +load method of NSObject, override +initialize instead.
     // See http://nshipster.com/swift-objc-runtime/
     private static var initialized: dispatch_once_t = 0
-    public override class func initialize() {
-        //if #available(iOS 9, *) { return }
+    public class func initializeSwizzlize() {
+        if #available(iOS 9, *) { return }
         guard self == WKWebView.self else { return }
         dispatch_once(&initialized) {
             let selector = Selector("loadFileURL:allowingReadAccessToURL:")

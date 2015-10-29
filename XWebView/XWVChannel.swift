@@ -17,6 +17,7 @@
 import Foundation
 import WebKit
 
+@available(iOS 8.0, *)
 public class XWVChannel : NSObject, WKScriptMessageHandler {
     public let name: String
     public let thread: NSThread!

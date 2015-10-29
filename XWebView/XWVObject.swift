@@ -17,6 +17,7 @@
 import Foundation
 import WebKit
 
+@available(iOS 8.0, *)
 public class XWVObject : NSObject {
     public let namespace: String
     public unowned let channel: XWVChannel

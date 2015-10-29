@@ -17,6 +17,7 @@
 import Foundation
 import WebKit
 
+@available(iOS 8.0, *)
 class XWVUserScript {
     weak var webView: WKWebView?
     let script: WKUserScript
