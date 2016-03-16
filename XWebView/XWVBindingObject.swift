@@ -140,7 +140,7 @@ class XWVBindingObject : XWVScriptObject {
             assert(channel.typeInfo[prop] != nil)
         }
         let script = "\(namespace).$properties['\(prop)'] = \(serialize(change?[NSKeyValueChangeNewKey]))"
-        main {
+        dispatch_async(dispatch_get_main_queue()) {
             webView.evaluateJavaScript(script, completionHandler: nil)
         }
     }
