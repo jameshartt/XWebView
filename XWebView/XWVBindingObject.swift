@@ -140,18 +140,22 @@ class XWVBindingObject : XWVScriptObject {
             assert(channel.typeInfo[prop] != nil)
         }
         let script = "\(namespace).$properties['\(prop)'] = \(serialize(change?[NSKeyValueChangeNewKey]))"
-        webView.evaluateJavaScript(script, completionHandler: nil)
+        main {
+            webView.evaluateJavaScript(script, completionHandler: nil)
+        }
     }
     private func startKVO() {
-        guard object is NSObject else { return }
+        guard object as? NSObject != nil else { return }
         for (_, member) in channel.typeInfo.filter({ $1.isProperty }) {
             object.addObserver(self, forKeyPath: member.getter!.description, options: NSKeyValueObservingOptions.New, context: nil)
         }
     }
     private func stopKVO() {
-        guard object is NSObject else { return }
+        guard object as? NSObject != nil else { return }
         for (_, member) in channel.typeInfo.filter({ $1.isProperty }) {
-            object.removeObserver(self, forKeyPath: member.getter!.description, context: nil)
+            if member.getter!.description.isEmpty == false {
+                object.removeObserver(self, forKeyPath: member.getter!.description, context: nil)
+            }
         }
     }
 }

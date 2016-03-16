@@ -100,7 +100,12 @@ extension WKWebView {
     public func loadFileURL(URL: NSURL, overlayURLs: [NSURL]? = nil) -> WKNavigation? {
         precondition(URL.fileURL && URL.baseURL != nil, "URL must be a relative file URL.")
         guard overlayURLs?.count > 0 else {
-            return loadFileURL(URL, allowingReadAccessToURL: URL.baseURL!)
+            if #available(iOS 9.0, *) {
+                return loadFileURL(URL, allowingReadAccessToURL: URL.baseURL!)
+            } else {
+                let html = try? String(contentsOfURL: URL)
+                return loadHTMLString(html ?? "", baseURL: URL.baseURL)
+            }
         }
 
         guard let port = startHttpd(rootURL: URL.baseURL!, overlayURLs: overlayURLs) else { return nil }
@@ -120,19 +125,13 @@ extension WKWebView {
     // See http://nshipster.com/swift-objc-runtime/
     private static var initialized: dispatch_once_t = 0
     public class func initializeSwizzlize() {
-        if #available(iOS 9, *) { return }
         guard self == WKWebView.self else { return }
         dispatch_once(&initialized) {
-            let selector = Selector("loadFileURL:allowingReadAccessToURL:")
-            let method = class_getInstanceMethod(self, Selector("_loadFileURL:allowingReadAccessToURL:"))
-            assert(method != nil)
-            if class_addMethod(self, selector, method_getImplementation(method), method_getTypeEncoding(method)) {
-                print("<XWV> INFO: Platform is iOS 8.x")
-                method_exchangeImplementations(
-                    class_getInstanceMethod(self, Selector("loadHTMLString:baseURL:")),
-                    class_getInstanceMethod(self, Selector("_loadHTMLString:baseURL:"))
-                )
-            }
+            print("<XWV> INFO: Platform is iOS 8.x")
+            method_exchangeImplementations(
+                class_getInstanceMethod(self, Selector("loadHTMLString:baseURL:")),
+                class_getInstanceMethod(self, Selector("_loadHTMLString:baseURL:"))
+            )
         }
     }
 
@@ -159,7 +158,9 @@ extension WKWebView {
             return _loadHTMLString(html, baseURL: baseURL)
         }
 
-        guard let port = startHttpd(rootURL: baseURL) else { return nil }
+        let keyOverlay = baseURL.URLByDeletingLastPathComponent!
+        let secondaryOverlay = keyOverlay.URLByDeletingLastPathComponent!
+        guard let port = startHttpd(rootURL: baseURL, overlayURLs: [keyOverlay, secondaryOverlay]) else { return nil }
         let url = NSURL(string: "http://127.0.0.1:\(port)/")
         return loadHTMLString(html, baseURL: url)
     }

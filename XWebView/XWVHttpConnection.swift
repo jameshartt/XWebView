@@ -25,8 +25,8 @@ protocol XWVHttpConnectionDelegate {
 final class XWVHttpConnection : NSObject {
     private let handle: CFSocketNativeHandle
     private let delegate: XWVHttpConnectionDelegate
-    private var input: NSInputStream!
-    private var output: NSOutputStream!
+    private var input: NSInputStream?
+    private var output: NSOutputStream?
     private let bufferMaxSize = 64 * 1024
 
     // input state
@@ -61,19 +61,19 @@ final class XWVHttpConnection : NSObject {
         CFReadStreamSetProperty(input, kCFStreamPropertyShouldCloseNativeSocket, kCFBooleanTrue)
         CFWriteStreamSetProperty(output, kCFStreamPropertyShouldCloseNativeSocket, kCFBooleanTrue)
 
-        input.delegate = self
-        output.delegate = self
-        input.scheduleInRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode)
-        output.scheduleInRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode)
-        input.open()
-        output.open()
+        input?.delegate = self
+        output?.delegate = self
+        input?.scheduleInRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode)
+        output?.scheduleInRunLoop(NSRunLoop.currentRunLoop(), forMode: NSDefaultRunLoopMode)
+        input?.open()
+        output?.open()
         delegate.didOpenConnection(self)
         return true
     }
 
     func close() {
-        input.close()
-        output.close()
+        input?.close()
+        output?.close()
         input = nil
         output = nil
         delegate.didCloseConnection(self)
@@ -96,30 +96,37 @@ extension XWVHttpConnection : NSStreamDelegate {
 
         case NSStreamEvent.HasBytesAvailable:
             let base = UnsafeMutablePointer<UInt8>(inputBuffer.mutableBytes)
-            let bytesReaded = input.read(base.advancedBy(cursor), maxLength: inputBuffer.length - cursor)
-            guard bytesReaded > 0 else { break }
+            let bytesReaded = input?.read(base.advancedBy(cursor), maxLength: inputBuffer.length - cursor)
+            guard let bytesRead = bytesReaded else { break }
+            guard bytesRead > 0 else { break }
 
             var bytesConsumed = 0
             var ptr = cursor > 3 ? base.advancedBy(cursor - 3): base
-            for _ in 0 ..< bytesReaded {
-                if UnsafePointer<UInt32>(ptr).memory == UInt32(bigEndian: 0x0d0a0d0a) {
-                    // End of request header.
-                    ptr += 3
-                    let data = inputBuffer.subdataWithRange(NSRange(bytesConsumed...base.distanceTo(ptr)))
-                    if let request = NSMutableURLRequest(data: data) {
-                        requestQueue.insert(request, atIndex: 0)
-                    } else {
-                        // Bad request
-                        requestQueue.insert(NSURLRequest(), atIndex: 0)
+            autoreleasepool {
+                for _ in 0 ..< bytesRead {
+                    if UnsafePointer<UInt32>(ptr).memory == UInt32(bigEndian: 0x0d0a0d0a) {
+                        // End of request header.
+                        ptr += 3
+                        let range = NSRange(bytesConsumed...base.distanceTo(ptr))
+                        guard (range.location + range.length) < inputBuffer.length else {
+                            break
+                        }
+                        let data = inputBuffer.subdataWithRange(range)
+                        if let request = NSMutableURLRequest(data: data) {
+                            requestQueue.insert(request, atIndex: 0)
+                        } else {
+                            // Bad request
+                            requestQueue.insert(NSURLRequest(), atIndex: 0)
+                        }
+                        bytesConsumed += data.length
                     }
-                    bytesConsumed += data.length
+                    ++ptr
                 }
-                ++ptr
             }
             if bytesConsumed > 0 {
                 // Move remained bytes to the begining.
                 inputBuffer.replaceBytesInRange(NSRange(0..<bytesConsumed), withBytes: nil, length: 0)
-            } else if bytesReaded + cursor == inputBuffer.length {
+            } else if bytesRead + cursor == inputBuffer.length {
                 // Enlarge input buffer.
                 guard inputBuffer.length < bufferMaxSize else {
                     close()
@@ -127,8 +134,8 @@ extension XWVHttpConnection : NSStreamDelegate {
                 }
                 inputBuffer.length <<= 1
             }
-            cursor += bytesReaded - bytesConsumed
-            if output.hasSpaceAvailable { fallthrough }
+            cursor += bytesRead - bytesConsumed
+            if output?.hasSpaceAvailable == true { fallthrough }
 
         case NSStreamEvent.HasSpaceAvailable:
             if outputBuffer == nil {
@@ -143,23 +150,25 @@ extension XWVHttpConnection : NSStreamDelegate {
             }
 
             var bytesSent = 0
-            repeat {
-                let off: Int
-                if bytesRemained > fileSize {
-                    // Send response header
-                    off = outputBuffer.length - (bytesRemained - fileSize)
-                } else {
-                    // Send file content
-                    off = (fileSize - bytesRemained) % bufferMaxSize
-                    if off == 0 {
-                        fileHandle.seekToFileOffset(UInt64(fileSize - bytesRemained))
-                        outputBuffer = fileHandle.readDataOfLength(bufferMaxSize)
+            autoreleasepool {
+                repeat {
+                    let off: Int
+                    if bytesRemained > fileSize {
+                        // Send response header
+                        off = outputBuffer.length - (bytesRemained - fileSize)
+                    } else {
+                        // Send file content
+                        off = (fileSize - bytesRemained) % bufferMaxSize
+                        if off == 0 {
+                            fileHandle.seekToFileOffset(UInt64(fileSize - bytesRemained))
+                            outputBuffer = fileHandle.readDataOfLength(bufferMaxSize)
+                        }
                     }
-                }
-                let ptr = UnsafePointer<UInt8>(outputBuffer.bytes)
-                bytesSent = output.write(ptr.advancedBy(off), maxLength: outputBuffer.length - off)
-                bytesRemained -= bytesSent
-            } while bytesRemained > 0 && output.hasSpaceAvailable && bytesSent > 0
+                    let ptr = UnsafePointer<UInt8>(outputBuffer.bytes)
+                    bytesSent = output?.write(ptr.advancedBy(off), maxLength: outputBuffer.length - off) ?? 0
+                    bytesRemained -= bytesSent
+                } while bytesRemained > 0 && output?.hasSpaceAvailable ?? false && bytesSent > 0
+            }
             if bytesRemained == 0 {
                 // Response has been sent completely.
                 fileHandle = nil
@@ -223,42 +232,55 @@ private extension NSMutableURLRequest {
     convenience init?(data: NSData) {
         self.init()
         var cursor = 0
-        repeat {
-            let range = NSRange(cursor..<data.length)
-            guard let end = data.rangeOfData(CRLF, options: NSDataSearchOptions(rawValue: 0), range: range).toRange()?.startIndex,
-                  let line = NSString(data: data.subdataWithRange(NSRange(cursor..<end)), encoding: NSASCIIStringEncoding) as? String else {
-                return nil
-            }
-            if cursor == 0 {
-                // request line
-                var method: Method?
-                var target: String = ""
-                var version: Version?
-                if let sp = line.characters.indexOf(" ") {
-                    method = Method(rawValue: line[line.startIndex ..< sp])
-                    target = line[sp.successor() ..< line.endIndex]
-                    if method != nil, let sp = target.characters.indexOf(" ") {
-                        version = Version(rawValue: target[sp.successor() ..< target.endIndex])
-                        target = target[target.startIndex ..< sp]
+        var returnNil = false
+        autoreleasepool {
+            repeat {
+                let range = NSRange(cursor..<data.length)
+                guard let end = data.rangeOfData(CRLF, options: NSDataSearchOptions(rawValue: 0), range: range).toRange()?.startIndex,
+                    let line = NSString(data: data.subdataWithRange(NSRange(cursor..<end)), encoding: NSASCIIStringEncoding) as? String else {
+                        returnNil = true
+                        break
+                }
+                if cursor == 0 {
+                    // request line
+                    var method: Method?
+                    var target: String = ""
+                    var version: Version?
+                    if let sp = line.characters.indexOf(" ") {
+                        method = Method(rawValue: line[line.startIndex ..< sp])
+                        target = line[sp.successor() ..< line.endIndex]
+                        if method != nil, let sp = target.characters.indexOf(" ") {
+                            version = Version(rawValue: target[sp.successor() ..< target.endIndex])
+                            target = target[target.startIndex ..< sp]
+                        }
+                    }
+                    guard version != nil else {
+                        returnNil = true
+                        break
+                    }
+                    HTTPMethod = method!.rawValue
+                    URL = NSURL(string: target)
+                } else if !line.isEmpty {
+                    // header field
+                    guard let colon = line.characters.indexOf(":") else {
+                        returnNil = true
+                        break
+                    }
+                    let name = line[line.startIndex ..< colon]
+                    var value = line[colon.successor() ..< line.endIndex]
+                    value.trim { $0 == " " || $0 == "\t" }
+                    if valueForHTTPHeaderField(name) != nil {
+                        addValue(value, forHTTPHeaderField:name)
+                    } else {
+                        setValue(value, forHTTPHeaderField:name)
                     }
                 }
-                guard version != nil else { return nil }
-                HTTPMethod = method!.rawValue
-                URL = NSURL(string: target)
-            } else if !line.isEmpty {
-                // header field
-                guard let colon = line.characters.indexOf(":") else { return nil }
-                let name = line[line.startIndex ..< colon]
-                var value = line[colon.successor() ..< line.endIndex]
-                value.trim { $0 == " " || $0 == "\t" }
-                if valueForHTTPHeaderField(name) != nil {
-                    addValue(value, forHTTPHeaderField:name)
-                } else {
-                    setValue(value, forHTTPHeaderField:name)
-                }
-            }
-            cursor = end + 2
-        } while cursor < data.length
+                cursor = end + 2
+            } while cursor < data.length
+        }
+        if returnNil {
+            return nil
+        }
     }
 }
 
@@ -267,14 +289,17 @@ private extension NSHTTPURLResponse {
         assert(statusCode > 100 && statusCode < 600)
         let reason = NSHTTPURLResponse.localizedStringForStatusCode(statusCode).capitalizedString
         let statusLine = "HTTP/1.1 \(statusCode) \(reason)\r\n"
-        let data = allHeaderFields.reduce(NSMutableData(data: statusLine.dataUsingEncoding(NSASCIIStringEncoding)!)) {
-            $0.appendData(($1.0 as! NSString).dataUsingEncoding(NSASCIIStringEncoding)!)
-            $0.appendData(": ".dataUsingEncoding(NSASCIIStringEncoding)!)
-            $0.appendData(($1.1 as! NSString).dataUsingEncoding(NSASCIIStringEncoding)!)
-            $0.appendData("\r\n".dataUsingEncoding(NSASCIIStringEncoding)!)
-            return $0
+        var data: NSMutableData = NSMutableData()
+        autoreleasepool {
+            data = allHeaderFields.reduce(NSMutableData(data: statusLine.dataUsingEncoding(NSASCIIStringEncoding)!)) {
+                $0.appendData(($1.0 as! NSString).dataUsingEncoding(NSASCIIStringEncoding)!)
+                $0.appendData(": ".dataUsingEncoding(NSASCIIStringEncoding)!)
+                $0.appendData(($1.1 as! NSString).dataUsingEncoding(NSASCIIStringEncoding)!)
+                $0.appendData("\r\n".dataUsingEncoding(NSASCIIStringEncoding)!)
+                return $0
+            }
+            data.appendData("\r\n".dataUsingEncoding(NSASCIIStringEncoding)!)
         }
-        data.appendData("\r\n".dataUsingEncoding(NSASCIIStringEncoding)!)
-        return data
+        return data.copy() as! NSData
     }
 }
