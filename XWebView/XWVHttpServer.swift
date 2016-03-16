@@ -26,6 +26,7 @@ class XWVHttpServer : NSObject {
     private var socket: CFSocketRef!
     private var connections = Set<XWVHttpConnection>()
     private let overlays: [NSURL]
+    private let relativePath: String
     private(set) var port: in_port_t = 0
 
     var rootURL: NSURL {
@@ -35,7 +36,7 @@ class XWVHttpServer : NSObject {
         return overlays.dropLast().reverse()
     }
 
-    init(rootURL: NSURL, overlayURLs: [NSURL]?) {
+    init(rootURL: NSURL, overlayURLs: [NSURL]?, relativePath: String) {
         precondition(rootURL.fileURL)
         var overlays = [rootURL]
         overlayURLs?.forEach {
@@ -43,10 +44,11 @@ class XWVHttpServer : NSObject {
             overlays.append($0)
         }
         self.overlays = overlays.reverse()
+        self.relativePath = relativePath
         super.init()
     }
     convenience init(rootURL: NSURL) {
-        self.init(rootURL: rootURL, overlayURLs: nil)
+        self.init(rootURL: rootURL, overlayURLs: nil, relativePath: "")
     }
     deinit {
         stop()
@@ -200,39 +202,39 @@ extension XWVHttpServer : XWVHttpConnectionDelegate {
         }
         return NSHTTPURLResponse(URL: fileURL, statusCode: statusCode, HTTPVersion: "HTTP/1.1", headerFields: headers)!
     }
-}
 
-func fileURLPath(overlays: [NSURL], request: NSURLRequest, fileManager: NSFileManager) -> NSURL? {
-    let relativePath = String(request.URL!.path!.characters.dropFirst())
+    func fileURLPath(overlays: [NSURL], request: NSURLRequest, fileManager: NSFileManager) -> NSURL? {
+        let relativePath = String(request.URL!.path!.characters.dropFirst())
 
-    for baseURL in overlays {
-        var isDirectory: ObjCBool = false
-        var url = NSURL(string: relativePath, relativeToURL: baseURL)!
-        if fileManager.fileExistsAtPath(url.path!, isDirectory: &isDirectory) {
-            if isDirectory {
-                url = url.URLByAppendingPathComponent("index.html")
-            }
-            if let path = url.path where fileManager.isReadableFileAtPath(path) {
-                return url
-            }
-        } else {
-            let documentsUrl = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true).map { (path) -> NSURL in
-                return NSURL(string: "file://\(path)") ?? NSURL()
-                }.first
-            let relativeUrl = documentsUrl?.path?.stringByAppendingString("\(kTemplatesRelativePath)\(request.URL!.absoluteString)")
+        for baseURL in overlays {
+            var isDirectory: ObjCBool = false
+            var url = NSURL(string: relativePath, relativeToURL: baseURL)!
+            if fileManager.fileExistsAtPath(url.path!, isDirectory: &isDirectory) {
+                if isDirectory {
+                    url = url.URLByAppendingPathComponent("index.html")
+                }
+                if let path = url.path where fileManager.isReadableFileAtPath(path) {
+                    return url
+                }
+            } else {
+                let documentsUrl = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true).map { (path) -> NSURL in
+                    return NSURL(string: "file://\(path)") ?? NSURL()
+                    }.first
+                let relativeUrl = documentsUrl?.path?.stringByAppendingString("\(relativePath)\(request.URL!.absoluteString)")
 
-            if let documentsUrl = documentsUrl, relativeUrl = relativeUrl {
-                if fileManager.fileExistsAtPath(relativeUrl, isDirectory: &isDirectory) {
-                    url = NSURL(string: documentsUrl.absoluteString.stringByAppendingString("\(kTemplatesRelativePath)\(request.URL!.absoluteString)"))!
-                    if fileManager.isReadableFileAtPath(url.path!) {
-                        return url
+                if let documentsUrl = documentsUrl, relativeUrl = relativeUrl {
+                    if fileManager.fileExistsAtPath(relativeUrl, isDirectory: &isDirectory) {
+                        url = NSURL(string: documentsUrl.absoluteString.stringByAppendingString("\(relativePath)\(request.URL!.absoluteString)"))!
+                        if fileManager.isReadableFileAtPath(url.path!) {
+                            return url
+                        }
                     }
                 }
             }
+            
         }
-
+        return nil
     }
-    return nil
 }
 
 private func ServerAcceptCallBack(socket: CFSocket!, type: CFSocketCallBackType, address: CFData!, data:UnsafePointer<Void>, info: UnsafeMutablePointer<Void>) {

@@ -194,7 +194,7 @@ extension WKWebView {
             httpd.stop()
         }
 
-        let httpd = XWVHttpServer(rootURL: rootURL, overlayURLs: overlayURLs)
+        let httpd = XWVHttpServer(rootURL: rootURL, overlayURLs: overlayURLs, relativePath: "/templates")
         guard httpd.start() else { return nil }
         objc_setAssociatedObject(self, key, httpd, objc_AssociationPolicy.OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         log("+HTTP server is started on port: \(httpd.port)")
