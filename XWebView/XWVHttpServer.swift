@@ -176,20 +176,7 @@ extension XWVHttpServer : XWVHttpConnectionDelegate {
             log("?Bad request")
         } else if request.HTTPMethod == "GET" || request.HTTPMethod == "HEAD" {
             let fileManager = NSFileManager.defaultManager()
-            let relativePath = String(request.URL!.path!.characters.dropFirst())
-            for baseURL in overlays {
-                var isDirectory: ObjCBool = false
-                var url = NSURL(string: relativePath, relativeToURL: baseURL)!
-                if fileManager.fileExistsAtPath(url.path!, isDirectory: &isDirectory) {
-                    if isDirectory {
-                        url = url.URLByAppendingPathComponent("index.html")
-                    }
-                    if fileManager.isReadableFileAtPath(url.path!) {
-                        fileURL = url
-                        break
-                    }
-                }
-            }
+            fileURL = fileURLPath(overlays, request: request, fileManager: fileManager) ?? fileURL
             if fileURL.path != nil {
                 statusCode = 200
                 let attrs = try! fileManager.attributesOfItemAtPath(fileURL.path!)
@@ -213,6 +200,39 @@ extension XWVHttpServer : XWVHttpConnectionDelegate {
         }
         return NSHTTPURLResponse(URL: fileURL, statusCode: statusCode, HTTPVersion: "HTTP/1.1", headerFields: headers)!
     }
+}
+
+func fileURLPath(overlays: [NSURL], request: NSURLRequest, fileManager: NSFileManager) -> NSURL? {
+    let relativePath = String(request.URL!.path!.characters.dropFirst())
+
+    for baseURL in overlays {
+        var isDirectory: ObjCBool = false
+        var url = NSURL(string: relativePath, relativeToURL: baseURL)!
+        if fileManager.fileExistsAtPath(url.path!, isDirectory: &isDirectory) {
+            if isDirectory {
+                url = url.URLByAppendingPathComponent("index.html")
+            }
+            if let path = url.path where fileManager.isReadableFileAtPath(path) {
+                return url
+            }
+        } else {
+            let documentsUrl = NSSearchPathForDirectoriesInDomains(.DocumentDirectory, .UserDomainMask, true).map { (path) -> NSURL in
+                return NSURL(string: "file://\(path)") ?? NSURL()
+                }.first
+            let relativeUrl = documentsUrl?.path?.stringByAppendingString("\(kTemplatesRelativePath)\(request.URL!.absoluteString)")
+
+            if let documentsUrl = documentsUrl, relativeUrl = relativeUrl {
+                if fileManager.fileExistsAtPath(relativeUrl, isDirectory: &isDirectory) {
+                    url = NSURL(string: documentsUrl.absoluteString.stringByAppendingString("\(kTemplatesRelativePath)\(request.URL!.absoluteString)"))!
+                    if fileManager.isReadableFileAtPath(url.path!) {
+                        return url
+                    }
+                }
+            }
+        }
+
+    }
+    return nil
 }
 
 private func ServerAcceptCallBack(socket: CFSocket!, type: CFSocketCallBackType, address: CFData!, data:UnsafePointer<Void>, info: UnsafeMutablePointer<Void>) {

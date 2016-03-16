@@ -114,7 +114,12 @@ extension WKWebView {
     // Overlay support for loading file URL
     public func loadFileURL(URL: NSURL, overlayURLs: [NSURL]? = nil) -> WKNavigation? {
         guard overlayURLs?.count > 0 else {
-            return loadFileURL(URL, allowingReadAccessToURL: URL.baseURL!)
+            if #available(iOS 9.0, *) {
+                return loadFileURL(URL, allowingReadAccessToURL: URL.baseURL!)
+            } else {
+                let html = try? String(contentsOfURL: URL)
+                return loadHTMLString(html ?? "", baseURL: URL.baseURL)
+            }
         }
 
         guard URL.fileURL && URL.baseURL != nil else {
@@ -137,20 +142,14 @@ extension WKWebView {
     // Swift 2 doesn't support override +load method of NSObject, override +initialize instead.
     // See http://nshipster.com/swift-objc-runtime/
     private static var initialized: dispatch_once_t = 0
-    public override class func initialize() {
-        //if #available(iOS 9, *) { return }
+    public class func initializeSwizzle() {
         guard self == WKWebView.self else { return }
         dispatch_once(&initialized) {
-            let selector = #selector(WKWebView.loadFileURL(_:allowingReadAccessToURL:))
-            let method = class_getInstanceMethod(self, #selector(WKWebView._loadFileURL(_:allowingReadAccessToURL:)))
-            assert(method != nil)
-            if class_addMethod(self, selector, method_getImplementation(method), method_getTypeEncoding(method)) {
-                log("+Running on iOS 8.x")
-                method_exchangeImplementations(
-                    class_getInstanceMethod(self, #selector(WKWebView.loadHTMLString(_:baseURL:))),
-                    class_getInstanceMethod(self, #selector(WKWebView._loadHTMLString(_:baseURL:)))
-                )
-            }
+            log("+Running on iOS 8.x")
+            method_exchangeImplementations(
+                class_getInstanceMethod(self, #selector(WKWebView.loadHTMLString(_:baseURL:))),
+                class_getInstanceMethod(self, #selector(WKWebView._loadHTMLString(_:baseURL:)))
+            )
         }
     }
 
@@ -179,7 +178,9 @@ extension WKWebView {
             return _loadHTMLString(html, baseURL: baseURL)
         }
 
-        guard let port = startHttpd(rootURL: baseURL) else { return nil }
+        let keyOverlay = baseURL.URLByDeletingLastPathComponent!
+        let secondaryOverlay = keyOverlay.URLByDeletingLastPathComponent!
+        guard let port = startHttpd(rootURL: baseURL, overlayURLs: [keyOverlay, secondaryOverlay]) else { return nil }
         let url = NSURL(string: "http://127.0.0.1:\(port)/")
         return loadHTMLString(html, baseURL: url)
     }
