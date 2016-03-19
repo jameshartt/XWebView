@@ -20,29 +20,6 @@ import WebKit
 
 @available(iOS 8.0, *)
 extension WKWebView {
-    public func loadPlugin(object: AnyObject, namespace: String) -> XWVScriptObject? {
-        let channel = XWVChannel(name: nil, webView: self)
-        return channel.bindPlugin(object, toNamespace: namespace)
-    }
-
-    func prepareForPlugin() {
-        let key = unsafeAddressOf(XWVChannel)
-        if objc_getAssociatedObject(self, key) != nil { return }
-
-        let bundle = NSBundle(forClass: XWVChannel.self)
-        guard let path = bundle.pathForResource("xwebview", ofType: "js"),
-            let source = try? NSString(contentsOfFile: path, encoding: NSUTF8StringEncoding) else {
-            preconditionFailure("FATAL: Internal error")
-        }
-        let time = WKUserScriptInjectionTime.AtDocumentStart
-        let script = WKUserScript(source: source as String, injectionTime: time, forMainFrameOnly: true)
-        let xwvplugin = XWVUserScript(webView: self, script: script, namespace: "XWVPlugin")
-        objc_setAssociatedObject(self, key, xwvplugin, objc_AssociationPolicy.OBJC_ASSOCIATION_RETAIN_NONATOMIC)
-    }
-}
-
-@available(iOS 8.0, *)
-extension WKWebView {
     // Synchronized evaluateJavaScript
     public func evaluateJavaScript(script: String, error: NSErrorPointer = nil) -> AnyObject? {
         var result: AnyObject?

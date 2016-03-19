@@ -120,7 +120,7 @@ extension XWVHttpConnection : NSStreamDelegate {
                         }
                         bytesConsumed += data.length
                     }
-                    ++ptr
+                    ptr = ptr.successor()
                 }
             }
             if bytesConsumed > 0 {
