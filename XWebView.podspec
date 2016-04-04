@@ -89,11 +89,8 @@ Pod::Spec.new do |s|
   #  Not including the public_header_files will make all headers public.
   #
 
-  s.source_files  = "XWebView/*.swift"
+  s.source_files  = "XWebView/*.swift", "XWebView/XWebView.h"
   s.exclude_files = "XWebView/XWVInvocation.swift", "XWebView/XWVHttp*.swift"
-
-  s.public_header_files = "**/*.h"
-
 
   # ――― Resources ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
   #
