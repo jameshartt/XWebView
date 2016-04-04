@@ -92,7 +92,7 @@ Pod::Spec.new do |s|
   s.source_files  = "XWebView/*.swift"
   s.exclude_files = "XWebView/XWVInvocation.swift", "XWebView/XWVHttp*.swift"
 
-  s.public_header_files = "XWebView/XWebView.h"
+  s.public_header_files = "**/*.h"
 
 
   # ――― Resources ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
