@@ -190,7 +190,6 @@ extension XWVHttpServer : XWVHttpConnectionDelegate {
                 // Not found
                 statusCode = 404
                 fileURL = NSURL()
-                log("-File NOT found for URL \(request.URL!)")
             }
         } else {
             // Method not allowed
