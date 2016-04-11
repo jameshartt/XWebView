@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   #
 
   s.name         = "XWebView"
-  s.version      = "0.9.4"
+  s.version      = "0.9.5"
   s.summary      = "An extensible WebView (based on WKWebView) for iOS."
 
   s.description  = <<-DESC
@@ -90,7 +90,7 @@ Pod::Spec.new do |s|
   #
 
   s.source_files  = "XWebView/*.swift", "XWebView/XWebView.h"
-  s.exclude_files = "XWebView/XWVInvocation.swift", "XWebView/XWVHttp*.swift"
+  # s.exclude_files = "Classes/Exclude"
 
   # ――― Resources ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
   #
@@ -113,6 +113,7 @@ Pod::Spec.new do |s|
   #
 
   s.framework  = "WebKit"
+  s.ios.framework = "MobileCoreServices"
   # s.frameworks = "SomeFramework", "AnotherFramework"
 
   # s.library   = "iconv"
@@ -130,12 +131,4 @@ Pod::Spec.new do |s|
   # s.xcconfig = { "HEADER_SEARCH_PATHS" => "$(SDKROOT)/usr/include/libxml2" }
   # s.dependency "JSONKit", "~> 1.4"
 
-  s.subspec "Invocation" do |sp|
-    sp.source_files = "XWebView/XWVInvocation.swift"
-  end
-
-  s.subspec "HttpServer" do |sp|
-    sp.source_files = "XWebView/XWVHttp*.swift"
-    sp.framework  = "MobileCoreServices"
-  end
 end
